@@ -4,11 +4,7 @@ import json
 import uuid
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
-
-
-if TYPE_CHECKING:
-    from robot.api import ServiceConfig
+from typing import Literal
 
 
 ProxyType = Literal["residential", "datacenter", "mix"]
@@ -52,34 +48,6 @@ class ProxySessionConfig:
 
     def as_http_proxy_url(self) -> str:
         return f"http://{self.username}:{self.password}@{self.host}:{self.port}"
-
-
-def make_geonode_config(
-    *, config: ServiceConfig, user: str, password: str
-) -> GeoNodeConfig:
-    if not user or not password:
-        msg = "proxy_user and proxy_pass are required"
-        raise ValueError(msg)
-    if config.geonode_gateway not in _GATEWAY_HOST_BY_NAME:
-        msg = "GEONODE_GATEWAY must be one of " + "|".join(
-            sorted(_GATEWAY_HOST_BY_NAME)
-        )
-        raise RuntimeError(msg)
-    if config.geonode_lifetime < 3 or config.geonode_lifetime > 1440:
-        msg = "GEONODE_LIFETIME must be between 3 and 1440 minutes"
-        raise RuntimeError(msg)
-    return GeoNodeConfig(
-        user=user,
-        password=password,
-        host=_GATEWAY_HOST_BY_NAME[config.geonode_gateway],
-        proxy_type=config.geonode_type,
-        country=config.geonode_country,
-        state=config.geonode_state,
-        city=config.geonode_city,
-        asn=config.geonode_asn,
-        strict_off=config.geonode_strict_off,
-        lifetime=config.geonode_lifetime,
-    )
 
 
 def build_username(config: GeoNodeConfig, *, session_id: str) -> str:

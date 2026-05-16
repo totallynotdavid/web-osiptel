@@ -1,7 +1,7 @@
 import type { Kysely } from "kysely";
 
 import type { Database } from "~/lib/db/types";
-import type { UploadJobPhase, UploadJobStatus } from "~/lib/db/schema/modules/pipeline.types";
+import type { UploadJobStatus } from "~/lib/db/schema/modules/pipeline.types";
 
 export function createJobsRepo(db: Kysely<Database>) {
   return {
@@ -48,9 +48,7 @@ export function createJobsRepo(db: Kysely<Database>) {
           total_rows: data.totalRows,
           processed_rows: 0,
           active_rows: 0,
-          phase: "queued",
           status: "pending",
-          bullmq_job_id: null,
           error_message: null,
           created_at: now,
           updated_at: now,
@@ -59,14 +57,10 @@ export function createJobsRepo(db: Kysely<Database>) {
         .execute();
     },
 
-    async updateStatus(
-      id: string,
-      patch: { phase?: UploadJobPhase; status?: UploadJobStatus; errorMessage?: string },
-    ) {
+    async updateStatus(id: string, patch: { status?: UploadJobStatus; errorMessage?: string }) {
       await db
         .updateTable("upload_jobs")
         .set({
-          ...(patch.phase ? { phase: patch.phase } : {}),
           ...(patch.status ? { status: patch.status } : {}),
           ...(patch.errorMessage !== undefined ? { error_message: patch.errorMessage } : {}),
           updated_at: Date.now(),
@@ -80,11 +74,13 @@ export function createJobsRepo(db: Kysely<Database>) {
         .selectFrom("upload_job_items")
         .selectAll()
         .where("upload_job_id", "=", uploadJobId)
-        .orderBy("id", "asc")
+        .orderBy("batch_index", "asc")
         .execute();
     },
 
-    async createItemsBatch(items: Array<{ id: string; uploadJobId: string; ruc: string }>) {
+    async createItemsBatch(
+      items: Array<{ id: string; uploadJobId: string; ruc: string; batchIndex: number }>,
+    ) {
       if (items.length === 0) return;
       await db
         .insertInto("upload_job_items")
@@ -93,12 +89,14 @@ export function createJobsRepo(db: Kysely<Database>) {
             id: i.id,
             upload_job_id: i.uploadJobId,
             ruc: i.ruc,
+            batch_index: i.batchIndex,
             status: "pending" as const,
             is_active: null,
             carrier_counts_json: null,
             providers_json: null,
             error: null,
             processed_at: null,
+            claimed_at: null,
           })),
         )
         .execute();

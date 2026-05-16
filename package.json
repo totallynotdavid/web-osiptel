@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "bun run --parallel --no-exit-on-error dev:web dev:robot",
     "dev:web": "bun run --cwd apps/web dev",
-    "dev:robot": "uv run --directory apps/robot uvicorn robot.main:app --host 0.0.0.0 --port 8001",
+    "dev:robot": "uv run --directory apps/robot python -m robot.worker",
     "check": "bun run --parallel check:web check:robot",
     "check:web": "bun run --cwd apps/web check:types",
     "check:robot": "uv run --directory apps/robot mypy .",

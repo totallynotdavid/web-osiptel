@@ -1,7 +1,9 @@
+import { Client } from "pg";
 import type { APIEvent } from "@solidjs/start/server";
 
 import { SESSION_COOKIE } from "~/lib/auth/session";
 import { db } from "~/lib/db/db";
+import { env } from "~/lib/env";
 import { createSessionRepo } from "~/server/auth/session-repo";
 import { createJobsRepo } from "~/server/pipeline/jobs-repo";
 
@@ -36,28 +38,66 @@ export async function GET(event: APIEvent): Promise<Response> {
       const encode = (data: object) =>
         controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`));
 
-      while (true) {
-        try {
-          const current = await jobs.findById(jobId);
-          if (!current) break;
+      const client = new Client({ connectionString: env.database.url });
+      await client.connect();
+      await client.query("LISTEN progress");
+      await client.query("LISTEN upload_done");
 
-          encode({
-            processed: current.processed_rows,
-            total: current.total_rows,
-            active: current.active_rows,
-            phase: current.phase,
-            status: current.status,
-          });
-
-          if (current.status === "completed" || current.status === "failed") break;
-
-          await new Promise<void>((r) => setTimeout(r, 2000));
-        } catch {
-          break;
+      const current = await jobs.findById(jobId);
+      if (current) {
+        encode({
+          processed: current.processed_rows,
+          total: current.total_rows,
+          active: current.active_rows,
+          status: current.status,
+        });
+        if (current.status === "completed" || current.status === "failed") {
+          await client.end();
+          controller.close();
+          return;
         }
       }
 
-      controller.close();
+      async function cleanup() {
+        await client.end().catch(() => {});
+        controller.close();
+      }
+
+      client.on("notification", async (msg) => {
+        try {
+          const payload = JSON.parse(msg.payload ?? "{}") as Record<string, unknown>;
+
+          if (msg.channel === "upload_done") {
+            if (payload.uploadJobId !== jobId) return;
+            const updated = await jobs.findById(jobId);
+            if (updated) {
+              encode({
+                processed: updated.processed_rows,
+                total: updated.total_rows,
+                active: updated.active_rows,
+                status: updated.status,
+              });
+            }
+            await cleanup();
+            return;
+          }
+
+          // progress channel: per-item notification
+          if (payload.uploadJobId !== jobId) return;
+          const updated = await jobs.findById(jobId);
+          if (!updated) return;
+          encode({
+            processed: updated.processed_rows,
+            total: updated.total_rows,
+            active: updated.active_rows,
+            status: updated.status,
+          });
+        } catch {
+          // ignore notification parse errors
+        }
+      });
+
+      event.request.signal.addEventListener("abort", cleanup);
     },
   });
 

@@ -9,8 +9,8 @@ export async function createTables<T>(db: Kysely<T>): Promise<void> {
     .addColumn("full_name", "varchar(255)", (col) => col.notNull())
     .addColumn("role", "varchar(20)", (col) => col.notNull())
     .addColumn("is_active", "integer", (col) => col.notNull().defaultTo(1))
-    .addColumn("created_at", "integer", (col) => col.notNull())
-    .addColumn("updated_at", "integer", (col) => col.notNull())
+    .addColumn("created_at", "bigint", (col) => col.notNull())
+    .addColumn("updated_at", "bigint", (col) => col.notNull())
     .execute();
 
   await db.schema.createIndex("idx_users_email").on("users").column("email").execute();

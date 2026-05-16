@@ -100,7 +100,7 @@ export default function DashboardPage() {
                           %
                         </p>
                       </div>
-                      <JobBadge status={job.status} phase={job.phase} />
+                      <JobBadge status={job.status} />
                     </div>
                   </A>
                 )}

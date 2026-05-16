@@ -1,101 +1,41 @@
-import { Worker } from "bullmq";
+import { Client } from "pg";
 
 import { db } from "~/lib/db/db";
+import { env } from "~/lib/env";
 import { createLogger } from "~/lib/observability/logger";
 import { initChannels, notify } from "~/lib/notifications/service";
-import { isErr } from "~/lib/result";
-import {
-  QUEUE_FILTER,
-  QUEUE_NOTIFY,
-  QUEUE_SCAN,
-  type FilterJobData,
-  type NotifyJobData,
-  type ScanJobData,
-} from "~/lib/queue/queues";
-import { createWorkerConnection } from "~/lib/queue/connection";
-import { processFilterBatch } from "~/server/pipeline/filter";
-import { processScanBatch } from "~/server/pipeline/scan";
 
-const WORKER_ID = `worker-${process.pid}`;
-const logger = createLogger("bg-runner", { workerId: WORKER_ID });
-
-logger.info("worker_starting");
+const logger = createLogger("notify-runner");
 
 await initChannels();
 
-const filterWorker = new Worker<FilterJobData>(
-  QUEUE_FILTER,
-  async (job) => {
-    const controller = new AbortController();
-    try {
-      const result = await processFilterBatch(job, db, controller.signal);
-      if (isErr(result)) throw new Error(result.error);
-    } catch (err) {
-      controller.abort();
-      throw err;
-    }
-  },
-  {
-    connection: createWorkerConnection(),
-    concurrency: 6,
-  },
-);
+const client = new Client({ connectionString: env.database.url });
+await client.connect();
+await client.query("LISTEN upload_done");
 
-const scanWorker = new Worker<ScanJobData>(
-  QUEUE_SCAN,
-  async (job) => {
-    const controller = new AbortController();
-    try {
-      const result = await processScanBatch(job, db, controller.signal);
-      if (isErr(result)) throw new Error(result.error);
-    } catch (err) {
-      controller.abort();
-      throw err;
-    }
-  },
-  {
-    connection: createWorkerConnection(),
-    concurrency: 4,
-  },
-);
+logger.info("notify_runner_ready");
 
-const notifyWorker = new Worker<NotifyJobData>(
-  QUEUE_NOTIFY,
-  async (job) => {
-    const { userId, uploadJobId, event, context } = job.data;
-    await notify(db, userId, event, { ...context, uploadJobId });
-  },
-  {
-    connection: createWorkerConnection(),
-    concurrency: 5,
-  },
-);
+client.on("notification", async (msg) => {
+  try {
+    const { uploadJobId, userId, status } = JSON.parse(msg.payload ?? "{}") as {
+      uploadJobId: string;
+      userId: string;
+      status: string;
+    };
+    const event = status === "completed" ? "upload_completed" : "upload_failed";
+    await notify(db, userId, event, { uploadJobId });
+  } catch (err: unknown) {
+    logger.error("notify_failed", { error: String(err) });
+  }
+});
 
-for (const worker of [filterWorker, scanWorker, notifyWorker]) {
-  worker.on("completed", (job) => {
-    logger.info("job_completed", { queue: job.queueName, jobId: job.id });
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error("job_failed", {
-      queue: job?.queueName,
-      jobId: job?.id,
-      error: String(err),
-    });
-  });
-
-  worker.on("error", (err) => {
-    logger.error("worker_error", { error: String(err) });
-  });
-}
-
-logger.info("worker_ready", {
-  queues: [QUEUE_FILTER, QUEUE_SCAN, QUEUE_NOTIFY],
+client.on("error", (err) => {
+  logger.error("pg_client_error", { error: String(err) });
 });
 
 async function shutdown() {
-  logger.info("worker_shutting_down");
-  await Promise.all([filterWorker.close(), scanWorker.close(), notifyWorker.close()]);
+  logger.info("notify_runner_shutting_down");
+  await client.end().catch(() => {});
   process.exit(0);
 }
 

@@ -9,7 +9,9 @@ export async function migrateToLatest(db: Kysely<any>): Promise<void> {
 
   if (stored === hash) return;
   if (stored !== null) {
-    throw new Error("Schema changed since DB was built.\n  ⇢ Delete vulf.db and re-run migrate");
+    throw new Error(
+      "Schema changed since DB was built.\n  ⇢ Drop and recreate the database, then re-run migrate",
+    );
   }
 
   await db.transaction().execute(async (trx) => {

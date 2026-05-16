@@ -28,7 +28,6 @@ export default function JobDetailPage() {
   const data = createAsync(() => jobDetailQuery(params.id ?? ""));
 
   const [progress, setProgress] = createSignal(0);
-  const [phase, setPhase] = createSignal<string>("queued");
 
   createEffect(() => {
     const d = data();
@@ -36,28 +35,20 @@ export default function JobDetailPage() {
     const { job } = d;
     const pct = job.total_rows > 0 ? Math.round((job.processed_rows / job.total_rows) * 100) : 0;
     setProgress(pct);
-    setPhase(job.phase);
 
     if (job.status === "running") {
       const es = new EventSource(`/api/jobs/${params.id}/progress`);
       es.onmessage = (e) => {
         try {
-          const msg = JSON.parse(e.data) as { processed: number; total: number; phase: string };
+          const msg = JSON.parse(e.data) as { processed: number; total: number };
           const p = msg.total > 0 ? Math.round((msg.processed / msg.total) * 100) : 0;
           setProgress(p);
-          setPhase(msg.phase);
         } catch {}
       };
       es.onerror = () => es.close();
       onCleanup(() => es.close());
     }
   });
-
-  function phaseLabel(p: string) {
-    if (p === "phase1") return "Phase 1 - filtering";
-    if (p === "phase2") return "Phase 2 - enriching";
-    return p;
-  }
 
   return (
     <div class="max-w-4xl mx-auto">
@@ -102,7 +93,6 @@ export default function JobDetailPage() {
               <Card class="p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                   <span class="section-label">Progress</span>
-                  <span class="text-xs text-gray-500 capitalize">{phaseLabel(phase())}</span>
                 </div>
                 <ProgressBar value={progress()} />
                 <div class="flex justify-between mt-2">

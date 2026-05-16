@@ -1,29 +1,20 @@
-import { createClient } from "@libsql/client";
-import { Kysely } from "kysely";
-import { LibSQLDialect } from "kysely-turso/libsql";
+import { Pool, types } from "pg";
+import { Kysely, PostgresDialect } from "kysely";
 
 import { createLogger } from "~/lib/observability/logger";
 import type { Database } from "./types";
 
 const logger = createLogger("db-client");
 
-function normalizeDbUrl(input: string): string {
-  if (
-    input === ":memory:" ||
-    input.startsWith("http://") ||
-    input.startsWith("https://") ||
-    input.startsWith("libsql://") ||
-    input.startsWith("file:")
-  ) {
-    return input;
-  }
-  return `file:${input}`;
-}
+// bigint (OID 20) arrives as string by default; parse to number since
+// epoch-ms timestamps are well within JS safe integer range.
+types.setTypeParser(20, Number);
 
-export function createDb(dbUrl: string): Kysely<Database> {
-  const url = normalizeDbUrl(dbUrl);
-  logger.info("db_init", { url });
-
-  const client = createClient({ url, intMode: "number" });
-  return new Kysely<Database>({ dialect: new LibSQLDialect({ client }) });
+export function createDb(connectionString: string): Kysely<Database> {
+  logger.info("db_init", { connectionString });
+  return new Kysely<Database>({
+    dialect: new PostgresDialect({
+      pool: new Pool({ connectionString }),
+    }),
+  });
 }

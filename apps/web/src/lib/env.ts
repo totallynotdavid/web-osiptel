@@ -10,14 +10,9 @@ function optional(key: string, fallback: string): string {
 
 export const env = {
   database: {
-    url: optional("DATABASE_URL", "file:vulf.db"),
-  },
-  redis: {
-    url: optional("REDIS_URL", "redis://localhost:6379"),
-  },
-  robot: {
-    url: optional("ROBOT_URL", "http://localhost:8001"),
-    token: process.env.ROBOT_API_TOKEN ?? "",
+    get url() {
+      return require("DATABASE_URL");
+    },
   },
   auth: {
     get sessionSecret() {

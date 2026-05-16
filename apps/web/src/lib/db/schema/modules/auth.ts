@@ -8,9 +8,9 @@ export async function createTables<T>(db: Kysely<T>): Promise<void> {
     .addColumn("role", "varchar(20)", (col) => col.notNull())
     .addColumn("ip_address", "text")
     .addColumn("user_agent", "text")
-    .addColumn("created_at", "integer", (col) => col.notNull())
-    .addColumn("last_activity", "integer", (col) => col.notNull())
-    .addColumn("expires_at", "integer", (col) => col.notNull())
+    .addColumn("created_at", "bigint", (col) => col.notNull())
+    .addColumn("last_activity", "bigint", (col) => col.notNull())
+    .addColumn("expires_at", "bigint", (col) => col.notNull())
     .execute();
 
   await db.schema
@@ -30,10 +30,10 @@ export async function createTables<T>(db: Kysely<T>): Promise<void> {
     .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
     .addColumn("scope", "varchar(20)", (col) => col.notNull())
     .addColumn("key_hash", "varchar(64)", (col) => col.notNull())
-    .addColumn("window_started_at", "integer", (col) => col.notNull())
+    .addColumn("window_started_at", "bigint", (col) => col.notNull())
     .addColumn("failure_count", "integer", (col) => col.notNull())
-    .addColumn("blocked_until", "integer")
-    .addColumn("updated_at", "integer", (col) => col.notNull())
+    .addColumn("blocked_until", "bigint")
+    .addColumn("updated_at", "bigint", (col) => col.notNull())
     .execute();
 
   await db.schema

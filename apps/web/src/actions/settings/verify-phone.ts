@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { getRequestEvent } from "solid-js/web";
 
 import { db } from "~/lib/db/db";
-import { getNotifyQueue } from "~/lib/queue/queues";
+import { notify } from "~/lib/notifications/service";
 
 export type VerifyResult = { ok: true } | { ok: false; error: string };
 
@@ -40,12 +40,7 @@ export async function sendVerificationCode(): Promise<VerifyResult> {
     .where("user_id", "=", session.userId)
     .execute();
 
-  await getNotifyQueue().add("phone_verification", {
-    userId: session.userId,
-    uploadJobId: "",
-    event: "phone_verification",
-    context: { phone: prefs.phone, code },
-  });
+  await notify(db, session.userId, "phone_verification", { phone: prefs.phone, code });
 
   return { ok: true };
 }

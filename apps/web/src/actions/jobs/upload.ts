@@ -4,12 +4,10 @@ import { redirect } from "@solidjs/router";
 import { getRequestEvent } from "solid-js/web";
 
 import { db } from "~/lib/db/db";
-import { getFilterQueue, type FilterJobData } from "~/lib/queue/queues";
 import { createJobsRepo } from "~/server/pipeline/jobs-repo";
-import { getProxyCredentials } from "~/server/pipeline/credentials-repo";
 
 const RUC_RE = /^\d{11}$/;
-const BATCH_SIZE = 30;
+const DB_CHUNK = 500;
 
 function parseRucs(text: string): string[] {
   return text
@@ -43,16 +41,14 @@ export async function uploadCsvAction(formData: FormData): Promise<UploadResult>
     return { ok: false, error: "empty" };
   }
 
-  const creds = await getProxyCredentials(db, session.userId);
-  if (!creds) return { ok: false, error: "no_credentials" };
-
   const jobId = crypto.randomUUID();
   const jobs = createJobsRepo(db);
 
-  const items: Array<{ id: string; uploadJobId: string; ruc: string }> = rucs.map((ruc) => ({
+  const items = rucs.map((ruc, i) => ({
     id: crypto.randomUUID(),
     uploadJobId: jobId,
     ruc,
+    batchIndex: i,
   }));
 
   await jobs.create({
@@ -62,37 +58,13 @@ export async function uploadCsvAction(formData: FormData): Promise<UploadResult>
     totalRows: rucs.length,
   });
 
-  // Insert items in chunks to avoid SQLite parameter limits
-  const DB_CHUNK = 500;
+  // Insert in chunks of 500
+  // TODO: Investigate the limits of PostgreSQL's parameter limit
   for (let i = 0; i < items.length; i += DB_CHUNK) {
     await jobs.createItemsBatch(items.slice(i, i + DB_CHUNK));
   }
+  // trg_notify_new_work fires on each INSERT, waking robot workers automatically
 
-  const totalBatches = Math.ceil(items.length / BATCH_SIZE);
-  const batches = [];
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const slice = items.slice(i, i + BATCH_SIZE);
-    const batchIndex = Math.floor(i / BATCH_SIZE);
-    batches.push({
-      name: "filter_batch",
-      data: {
-        uploadJobId: jobId,
-        userId: session.userId,
-        batchIndex,
-        totalBatches,
-        itemIds: slice.map((x) => x.id),
-        rucList: slice.map((x) => x.ruc),
-        proxyUser: creds.username,
-        proxyPass: creds.password,
-      } satisfies FilterJobData,
-      opts: {
-        jobId: `${jobId}:filter:${batchIndex}`,
-      },
-    });
-  }
-
-  await getFilterQueue().addBulk(batches);
-  await jobs.updateStatus(jobId, { phase: "filtering", status: "running" });
-
+  await jobs.updateStatus(jobId, { status: "running" });
   throw redirect(`/jobs/${jobId}`);
 }

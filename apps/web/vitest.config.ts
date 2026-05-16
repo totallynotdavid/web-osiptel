@@ -17,7 +17,7 @@ export default defineConfig({
       SESSION_SECRET: "test-session-secret",
       SEED_PASSWORD: "TestPassword!123",
       ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-      DATABASE_URL: "file:test.db",
+      DATABASE_URL: "postgresql://localhost:5432/vulf_test",
     },
   },
 });
