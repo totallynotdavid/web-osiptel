@@ -54,7 +54,7 @@ jobs:
         run: bun run lint
 
       - name: type check
-        run: bun run check
+        run: bun run check:web
 
       - name: test
         run: bun run test
