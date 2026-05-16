@@ -1,0 +1,15 @@
+# python artifacts
+__pycache__/
+.pytest_cache/
+downloaded_files/
+
+# build artifacts
+build/
+dist/
+*.egg-info/
+
+# files
+*.csv
+.env
+
+*.log

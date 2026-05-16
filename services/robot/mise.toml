@@ -1,0 +1,20 @@
+[tools]
+ruff = "0.14.5"
+
+[tasks.install]
+run = "uv sync --all-groups"
+
+[tasks.update]
+run = "uv sync -U --all-groups"
+
+[tasks.outdated]
+run = "uv pip list --outdated"
+
+[tasks.format]
+run = ["ruff format", "ruff check --fix"]
+
+[tasks.check]
+run = "uv run mypy ."
+
+[tasks.build]
+run = ["rm -rf dist build", "uv run pyinstaller robot.spec"]
