@@ -11,6 +11,7 @@
   "useTabs": false,
   "endOfLine": "lf",
   "insertFinalNewline": true,
+  "ignorePatterns": ["**/pyproject.toml"],
   "overrides": [
     {
       "files": ["**/*.md"],
