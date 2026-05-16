@@ -5,16 +5,16 @@ import { createLogger } from "~/lib/observability/logger";
 import { initChannels, notify } from "~/lib/notifications/service";
 import { isErr } from "~/lib/result";
 import {
+  QUEUE_FILTER,
   QUEUE_NOTIFY,
-  QUEUE_PHASE1,
-  QUEUE_PHASE2,
+  QUEUE_SCAN,
+  type FilterJobData,
   type NotifyJobData,
-  type Phase1JobData,
-  type Phase2JobData,
+  type ScanJobData,
 } from "~/lib/queue/queues";
 import { createWorkerConnection } from "~/lib/queue/connection";
-import { processPhase1Batch } from "~/server/pipeline/phase1";
-import { processPhase2Item } from "~/server/pipeline/phase2";
+import { processFilterBatch } from "~/server/pipeline/filter";
+import { processScanBatch } from "~/server/pipeline/scan";
 
 const WORKER_ID = `worker-${process.pid}`;
 const logger = createLogger("bg-runner", { workerId: WORKER_ID });
@@ -23,32 +23,12 @@ logger.info("worker_starting");
 
 await initChannels();
 
-// Phase 1 worker - filter orgs via robot (batches of 30)
-const phase1Worker = new Worker<Phase1JobData>(
-  QUEUE_PHASE1,
-  async (job, _token) => {
-    const controller = new AbortController();
-    try {
-      const result = await processPhase1Batch(job, db, controller.signal);
-      if (isErr(result)) throw new Error(result.error);
-    } catch (err) {
-      controller.abort();
-      throw err;
-    }
-  },
-  {
-    connection: createWorkerConnection(),
-    concurrency: 3,
-  },
-);
-
-// Phase 2 worker - get provider details, parallelized per org
-const phase2Worker = new Worker<Phase2JobData>(
-  QUEUE_PHASE2,
+const filterWorker = new Worker<FilterJobData>(
+  QUEUE_FILTER,
   async (job) => {
     const controller = new AbortController();
     try {
-      const result = await processPhase2Item(job, db, controller.signal);
+      const result = await processFilterBatch(job, db, controller.signal);
       if (isErr(result)) throw new Error(result.error);
     } catch (err) {
       controller.abort();
@@ -57,11 +37,28 @@ const phase2Worker = new Worker<Phase2JobData>(
   },
   {
     connection: createWorkerConnection(),
-    concurrency: 10,
+    concurrency: 6,
   },
 );
 
-// Notification worker
+const scanWorker = new Worker<ScanJobData>(
+  QUEUE_SCAN,
+  async (job) => {
+    const controller = new AbortController();
+    try {
+      const result = await processScanBatch(job, db, controller.signal);
+      if (isErr(result)) throw new Error(result.error);
+    } catch (err) {
+      controller.abort();
+      throw err;
+    }
+  },
+  {
+    connection: createWorkerConnection(),
+    concurrency: 4,
+  },
+);
+
 const notifyWorker = new Worker<NotifyJobData>(
   QUEUE_NOTIFY,
   async (job) => {
@@ -74,7 +71,7 @@ const notifyWorker = new Worker<NotifyJobData>(
   },
 );
 
-for (const worker of [phase1Worker, phase2Worker, notifyWorker]) {
+for (const worker of [filterWorker, scanWorker, notifyWorker]) {
   worker.on("completed", (job) => {
     logger.info("job_completed", { queue: job.queueName, jobId: job.id });
   });
@@ -93,12 +90,12 @@ for (const worker of [phase1Worker, phase2Worker, notifyWorker]) {
 }
 
 logger.info("worker_ready", {
-  queues: [QUEUE_PHASE1, QUEUE_PHASE2, QUEUE_NOTIFY],
+  queues: [QUEUE_FILTER, QUEUE_SCAN, QUEUE_NOTIFY],
 });
 
 async function shutdown() {
   logger.info("worker_shutting_down");
-  await Promise.all([phase1Worker.close(), phase2Worker.close(), notifyWorker.close()]);
+  await Promise.all([filterWorker.close(), scanWorker.close(), notifyWorker.close()]);
   process.exit(0);
 }
 

@@ -1,4 +1,4 @@
-from robot.providers.geonode import load_geonode_config
+from robot.providers.geonode import make_geonode_config
 
 
-__all__ = ["load_geonode_config"]
+__all__ = ["make_geonode_config"]
