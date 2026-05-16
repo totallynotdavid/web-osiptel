@@ -2,9 +2,7 @@ import { defineConfig } from "oxlint";
 
 export default defineConfig({
   plugins: ["import", "promise", "typescript", "unicorn", "oxc", "vitest"],
-  jsPlugins: [
-    { name: "solid", specifier: "eslint-plugin-solid" },
-  ],
+  jsPlugins: [{ name: "solid", specifier: "eslint-plugin-solid" }],
   categories: {
     correctness: "error",
     suspicious: "error",
