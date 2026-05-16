@@ -1,0 +1,25 @@
+import { defineConfig } from "oxfmt";
+
+export default defineConfig({
+  semi: true,
+  singleQuote: false,
+  jsxSingleQuote: false,
+  trailingComma: "all",
+  quoteProps: "as-needed",
+  arrowParens: "always",
+  bracketSpacing: true,
+  tabWidth: 2,
+  useTabs: false,
+  endOfLine: "lf",
+  insertFinalNewline: true,
+  ignorePatterns: ["**/pyproject.toml"],
+  overrides: [
+    {
+      files: ["**/*.md"],
+      options: {
+        printWidth: 80,
+        proseWrap: "always",
+      },
+    },
+  ],
+});

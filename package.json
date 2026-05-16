@@ -4,6 +4,7 @@
   "workspaces": [
     "apps/*"
   ],
+  "type": "module",
   "scripts": {
     "dev": "bun run --parallel --no-exit-on-error dev:web dev:robot",
     "dev:web": "bun run --cwd apps/web dev",

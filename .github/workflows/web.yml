@@ -9,8 +9,8 @@ on:
       - "apps/web/**"
       - "package.json"
       - "bun.lock"
-      - ".oxlintrc.json"
-      - ".oxfmtrc.json"
+      - "oxlint.config.ts"
+      - "oxfmt.config.ts"
       - ".github/workflows/web.yml"
   pull_request:
     branches:
@@ -19,8 +19,8 @@ on:
       - "apps/web/**"
       - "package.json"
       - "bun.lock"
-      - ".oxlintrc.json"
-      - ".oxfmtrc.json"
+      - "oxlint.config.ts"
+      - "oxfmt.config.ts"
       - ".github/workflows/web.yml"
 
 concurrency:

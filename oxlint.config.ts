@@ -1,14 +1,15 @@
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["import", "promise", "typescript", "unicorn", "oxc", "vitest"],
-  "categories": {
-    "correctness": "error",
-    "suspicious": "error"
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+  plugins: ["import", "promise", "typescript", "unicorn", "oxc", "vitest"],
+  categories: {
+    correctness: "error",
+    suspicious: "error",
   },
-  "options": {
-    "typeAware": true
+  options: {
+    typeAware: true,
   },
-  "rules": {
+  rules: {
     "import/no-named-export": "off",
     "import/group-exports": "off",
     "import/no-relative-parent-imports": "off",
@@ -20,18 +21,18 @@
     "typescript/no-unnecessary-type-assertion": "off",
     "typescript/no-unsafe-enum-comparison": "off",
     "unicorn/consistent-function-scoping": "off",
-    "unicorn/prefer-add-event-listener": "off"
+    "unicorn/prefer-add-event-listener": "off",
   },
-  "env": {
-    "builtin": true,
-    "node": true
+  env: {
+    builtin: true,
+    node: true,
   },
-  "overrides": [
+  overrides: [
     {
-      "files": ["apps/web/tests/**/*.test.ts"],
-      "env": {
-        "vitest": true
-      }
-    }
-  ]
-}
+      files: ["apps/web/tests/**/*.test.ts"],
+      env: {
+        vitest: true,
+      },
+    },
+  ],
+});
