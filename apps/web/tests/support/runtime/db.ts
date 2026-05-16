@@ -1,28 +1,33 @@
-import path from "node:path";
-import { mkdir, rm } from "node:fs/promises";
+import { Pool } from "pg";
+import { Kysely, PostgresDialect } from "kysely";
 
-import type { Kysely } from "kysely";
-
-import { createDb } from "~/lib/db/client";
 import { migrateToLatest } from "~/lib/db/migrate";
 import type { Database } from "~/lib/db/types";
 
-const DB_DIR = path.resolve(process.cwd(), ".vitest-db");
-
 export interface TestDbContext {
   db: Kysely<Database>;
-  filePath: string;
+  schema: string;
 }
 
 export async function createIsolatedTestDb(name: string): Promise<TestDbContext> {
-  await mkdir(DB_DIR, { recursive: true });
-  const filePath = path.join(DB_DIR, `${name}-${crypto.randomUUID()}.db`);
-  const db = createDb(`file:${filePath}`);
+  const url = process.env.DATABASE_URL!;
+  const safeName = name.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+  const schema = `t_${safeName}_${crypto.randomUUID().replace(/-/g, "")}`;
+
+  const adminPool = new Pool({ connectionString: url });
+  await adminPool.query(`CREATE SCHEMA "${schema}"`);
+  await adminPool.end();
+
+  const pool = new Pool({ connectionString: url, options: `-c search_path=${schema}` });
+  const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+
   await migrateToLatest(db);
-  return { db, filePath };
+  return { db, schema };
 }
 
 export async function cleanupTestDb(ctx: TestDbContext): Promise<void> {
   await ctx.db.destroy();
-  await rm(ctx.filePath, { force: true });
+  const adminPool = new Pool({ connectionString: process.env.DATABASE_URL! });
+  await adminPool.query(`DROP SCHEMA IF EXISTS "${ctx.schema}" CASCADE`);
+  await adminPool.end();
 }
