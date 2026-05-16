@@ -33,7 +33,7 @@ export const env = {
   },
   email: {
     resendApiKey: process.env.RESEND_API_KEY ?? null,
-    from: optional("RESEND_FROM", "noreply@vulf.app"),
+    from: optional("RESEND_FROM", "noreply@example.test"),
   },
   app: {
     url: optional("APP_URL", "http://localhost:3000"),

@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "bun run --cwd apps/web dev",
     "check": "bun run --cwd apps/web check:types",
+    "test": "bun run --cwd apps/web test",
     "format": "oxfmt .",
     "lint": "oxlint"
   },
