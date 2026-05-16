@@ -17,6 +17,7 @@
     "lint": "oxlint --deny-warnings apps/web"
   },
   "devDependencies": {
+    "eslint-plugin-solid": "^0.14.5",
     "oxfmt": "^0.50.0",
     "oxlint": "^1.65.0",
     "oxlint-tsgolint": "^0.22.1"
