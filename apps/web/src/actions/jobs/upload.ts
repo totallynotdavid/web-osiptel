@@ -9,6 +9,8 @@ import { createJobsRepo } from "~/server/pipeline/jobs-repo";
 
 const RUC_RE = /^\d{11}$/;
 const BATCH_SIZE = 30;
+const MAX_PHASE1_BATCHES_IN_FLIGHT_PER_UPLOAD = 6;
+const PHASE1_WAVE_DELAY_MS = 15_000;
 
 function parseRucs(text: string): string[] {
   return text
@@ -68,6 +70,8 @@ export async function uploadCsvAction(formData: FormData): Promise<UploadResult>
   const batches = [];
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
     const slice = items.slice(i, i + BATCH_SIZE);
+    const batchIndex = Math.floor(i / BATCH_SIZE);
+    const wave = Math.floor(batchIndex / MAX_PHASE1_BATCHES_IN_FLIGHT_PER_UPLOAD);
     batches.push({
       name: "phase1_batch",
       data: {
@@ -76,6 +80,10 @@ export async function uploadCsvAction(formData: FormData): Promise<UploadResult>
         itemIds: slice.map((x) => x.id),
         rucList: slice.map((x) => x.ruc),
       } satisfies Phase1JobData,
+      opts: {
+        delay: wave * PHASE1_WAVE_DELAY_MS,
+        jobId: `${jobId}:phase1:${batchIndex}`,
+      },
     });
   }
 

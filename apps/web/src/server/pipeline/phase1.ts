@@ -10,6 +10,32 @@ import { robotLookup } from "~/server/robot/client";
 import { getProxyCredentials } from "./credentials-repo";
 
 const logger = createLogger("pipeline:phase1");
+const MAX_PHASE2_ITEMS_IN_FLIGHT_PER_UPLOAD = 30;
+const PHASE2_WAVE_DELAY_MS = 5_000;
+
+function buildItemIdBuckets(itemIds: string[], rucList: string[]): Map<string, string[]> {
+  const buckets = new Map<string, string[]>();
+  for (let i = 0; i < rucList.length; i += 1) {
+    const ruc = rucList[i];
+    const itemId = itemIds[i];
+    if (!ruc || !itemId) continue;
+    const queue = buckets.get(ruc);
+    if (queue) {
+      queue.push(itemId);
+      continue;
+    }
+    buckets.set(ruc, [itemId]);
+  }
+  return buckets;
+}
+
+function popItemId(buckets: Map<string, string[]>, ruc: string): string | null {
+  const queue = buckets.get(ruc);
+  if (!queue || queue.length === 0) return null;
+  const itemId = queue.shift() ?? null;
+  if (queue.length === 0) buckets.delete(ruc);
+  return itemId;
+}
 
 export async function processPhase1Batch(
   job: Job<Phase1JobData>,
@@ -17,6 +43,7 @@ export async function processPhase1Batch(
   signal: AbortSignal,
 ): Promise<Result<void, string>> {
   const { uploadJobId, userId, itemIds, rucList } = job.data;
+  const itemIdBuckets = buildItemIdBuckets(itemIds, rucList);
 
   logger.info("phase1_batch_start", { uploadJobId, count: rucList.length });
 
@@ -39,10 +66,11 @@ export async function processPhase1Batch(
   await job.updateProgress(70);
 
   const now = Date.now();
+  const activeWithItemIds: Array<{ itemId: string; ruc: string }> = [];
 
   // Persist results for each item
   for (const result of results) {
-    const itemId = itemIds[rucList.indexOf(result.ruc)];
+    const itemId = popItemId(itemIdBuckets, result.ruc);
     if (!itemId) continue;
 
     await db
@@ -56,6 +84,10 @@ export async function processPhase1Batch(
       })
       .where("id", "=", itemId)
       .execute();
+
+    if (result.active) {
+      activeWithItemIds.push({ itemId, ruc: result.ruc });
+    }
   }
 
   // Update processed_rows counter on the parent job
@@ -71,19 +103,22 @@ export async function processPhase1Batch(
   await job.updateProgress(90);
 
   // Enqueue phase2 for active orgs in this batch
-  const activeItems = results.filter((r) => r.active);
-  if (activeItems.length > 0) {
-    const phase2Jobs = activeItems.map((r) => {
-      const itemId = itemIds[rucList.indexOf(r.ruc)];
+  if (activeWithItemIds.length > 0) {
+    const phase2Jobs = activeWithItemIds.map((entry, index) => {
+      const wave = Math.floor(index / MAX_PHASE2_ITEMS_IN_FLIGHT_PER_UPLOAD);
       return {
         name: "phase2_item",
         data: {
           uploadJobId,
           userId,
-          itemId: itemId!,
-          ruc: r.ruc,
+          itemId: entry.itemId,
+          ruc: entry.ruc,
         } satisfies Phase2JobData,
         queueName: QUEUE_PHASE2,
+        opts: {
+          delay: wave * PHASE2_WAVE_DELAY_MS,
+          jobId: `${uploadJobId}:phase2:${entry.itemId}:${index}`,
+        },
       };
     });
 
@@ -94,7 +129,7 @@ export async function processPhase1Batch(
   logger.info("phase1_batch_done", {
     uploadJobId,
     processed: results.length,
-    active: activeItems.length,
+    active: activeWithItemIds.length,
   });
   return ok(undefined);
 }
