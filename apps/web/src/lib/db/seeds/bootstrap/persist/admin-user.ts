@@ -12,7 +12,7 @@ export async function persistAdminUser(db: Kysely<Database>, nowMs: number): Pro
     .insertInto("users")
     .values({
       id: crypto.randomUUID(),
-      email: "admin@vulf.app",
+      email: "admin@example.test",
       password_hash: passwordHash,
       full_name: "Vulf Admin",
       role: "admin",
