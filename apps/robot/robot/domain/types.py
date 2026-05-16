@@ -41,22 +41,3 @@ class LookupResult:
     attempt: int = 0
     session_id: str = ""
     proxy_id: str = ""
-
-
-@dataclass
-class WorkerSummary:
-    processed: int = 0
-    succeeded: int = 0
-    failed: int = 0
-
-
-@dataclass
-class RunSummary:
-    rows_read: int = 0
-    valid: int = 0
-    ignored: int = 0
-    duplicates: int = 0
-    skipped: int = 0
-    processed: int = 0
-    succeeded: int = 0
-    failed: int = 0

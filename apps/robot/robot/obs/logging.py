@@ -4,10 +4,8 @@ import logging
 import sys
 import uuid
 
-from pathlib import Path
 
-
-def configure_logging(*, debug: bool, run_id: str | None = None) -> None:
+def configure_logging(*, debug: bool) -> None:
     root_level = logging.INFO
     root = logging.getLogger()
     root.handlers.clear()
@@ -19,15 +17,6 @@ def configure_logging(*, debug: bool, run_id: str | None = None) -> None:
     console.setLevel(root_level)
     console.setFormatter(formatter)
     root.addHandler(console)
-
-    if run_id:
-        log_dir = Path("logs")
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = log_dir / f"{run_id}.log"
-        file_handler = logging.FileHandler(log_path, mode="a", encoding="utf-8")
-        file_handler.setLevel(root_level)
-        file_handler.setFormatter(formatter)
-        root.addHandler(file_handler)
 
     if debug:
         logging.getLogger("robot").setLevel(logging.DEBUG)

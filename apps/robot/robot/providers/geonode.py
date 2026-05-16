@@ -4,12 +4,11 @@ import json
 import uuid
 
 from dataclasses import dataclass
-from os import getenv
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal
 
-import httpx
 
-from dotenv import load_dotenv
+if TYPE_CHECKING:
+    from robot.api import ServiceConfig
 
 
 ProxyType = Literal["residential", "datacenter", "mix"]
@@ -55,50 +54,31 @@ class ProxySessionConfig:
         return f"http://{self.username}:{self.password}@{self.host}:{self.port}"
 
 
-def load_geonode_config(
-    *, env_file: str, user: str | None = None, password: str | None = None
+def make_geonode_config(
+    *, config: ServiceConfig, user: str, password: str
 ) -> GeoNodeConfig:
-    load_dotenv(env_file, override=False)
-
-    resolved_user = user if user is not None else getenv("GEONODE_USER", "")
-    resolved_password = password if password is not None else getenv("GEONODE_PASS", "")
-    gateway = getenv("GEONODE_GATEWAY", "fr")
-    proxy_type_raw = getenv("GEONODE_TYPE", "residential")
-    country = getenv("GEONODE_COUNTRY", "")
-    state = getenv("GEONODE_STATE", "")
-    city = getenv("GEONODE_CITY", "")
-    asn = getenv("GEONODE_ASN", "")
-    strict_off = getenv("GEONODE_STRICT_OFF", "").lower() in {"1", "true", "yes"}
-    lifetime_raw = getenv("GEONODE_LIFETIME", "").strip()
-    lifetime = int(lifetime_raw) if lifetime_raw else 10
-
-    if not resolved_user or not resolved_password:
-        msg = "missing GEONODE_USER or GEONODE_PASS"
-        raise RuntimeError(msg)
-    if gateway not in _GATEWAY_HOST_BY_NAME:
+    if not user or not password:
+        msg = "proxy_user and proxy_pass are required"
+        raise ValueError(msg)
+    if config.geonode_gateway not in _GATEWAY_HOST_BY_NAME:
         msg = "GEONODE_GATEWAY must be one of " + "|".join(
             sorted(_GATEWAY_HOST_BY_NAME)
         )
         raise RuntimeError(msg)
-    if proxy_type_raw not in {"residential", "datacenter", "mix"}:
-        msg = "GEONODE_TYPE must be one of residential|datacenter|mix"
-        raise RuntimeError(msg)
-    if lifetime < 3 or lifetime > 1440:
+    if config.geonode_lifetime < 3 or config.geonode_lifetime > 1440:
         msg = "GEONODE_LIFETIME must be between 3 and 1440 minutes"
         raise RuntimeError(msg)
-
-    proxy_type = cast("ProxyType", proxy_type_raw)
     return GeoNodeConfig(
-        user=resolved_user,
-        password=resolved_password,
-        host=_GATEWAY_HOST_BY_NAME[gateway],
-        proxy_type=proxy_type,
-        country=country,
-        state=state,
-        city=city,
-        asn=asn,
-        strict_off=strict_off,
-        lifetime=lifetime,
+        user=user,
+        password=password,
+        host=_GATEWAY_HOST_BY_NAME[config.geonode_gateway],
+        proxy_type=config.geonode_type,
+        country=config.geonode_country,
+        state=config.geonode_state,
+        city=config.geonode_city,
+        asn=config.geonode_asn,
+        strict_off=config.geonode_strict_off,
+        lifetime=config.geonode_lifetime,
     )
 
 
@@ -168,6 +148,8 @@ def _new_session_id(slot_id: int) -> str:
 def _release_sticky_session(
     *, user: str, password: str, session_id: str, port: int, timeout_s: float
 ) -> tuple[bool, int, str]:
+    import httpx
+
     try:
         with httpx.Client(timeout=timeout_s, auth=(user, password)) as client:
             response = client.put(
