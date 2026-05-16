@@ -11,7 +11,7 @@ describe("credentials encryption integration", () => {
 
     const [iv, tag, cipher] = parts;
     const tampered = `${iv}:${tag}:${cipher.slice(0, -2)}AA`;
-    expect(() => decrypt(tampered)).toThrow();
+    expect(() => decrypt(tampered)).toThrow(/.+/);
     expect(() => decrypt("bad-format")).toThrow("Invalid encrypted credential format");
   });
 });
