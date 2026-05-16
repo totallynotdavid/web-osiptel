@@ -4,10 +4,6 @@ function require(key: string): string {
   return val;
 }
 
-function optional(key: string, fallback: string): string {
-  return process.env[key] ?? fallback;
-}
-
 export const env = {
   database: {
     get url() {
@@ -28,10 +24,16 @@ export const env = {
     },
   },
   email: {
-    resendApiKey: process.env.RESEND_API_KEY ?? null,
-    from: optional("RESEND_FROM", "noreply@example.test"),
+    get apiKey() {
+      return require("EMAIL_API_KEY");
+    },
+    get from() {
+      return require("EMAIL_FROM");
+    },
   },
   app: {
-    url: optional("APP_URL", "http://localhost:3000"),
+    get url() {
+      return require("APP_URL");
+    },
   },
 } as const;

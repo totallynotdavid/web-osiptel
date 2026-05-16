@@ -10,11 +10,7 @@ export const emailChannel: NotificationChannel = {
   id: "email",
   contactField: "email",
   async send(to: string, message: NotificationMessage): Promise<void> {
-    if (!env.email.resendApiKey) {
-      logger.warn("email_skipped_no_api_key", { to });
-      return;
-    }
-    const client = new Resend(env.email.resendApiKey);
+    const client = new Resend(env.email.apiKey);
     const { error } = await client.emails.send({
       from: env.email.from,
       to,
