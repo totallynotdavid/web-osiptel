@@ -27,7 +27,7 @@ export async function createTables<T>(db: Kysely<T>): Promise<void> {
 
   await db.schema
     .createTable("auth_throttle_counters")
-    .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+    .addColumn("id", "serial", (col) => col.primaryKey())
     .addColumn("scope", "varchar(20)", (col) => col.notNull())
     .addColumn("key_hash", "varchar(64)", (col) => col.notNull())
     .addColumn("window_started_at", "bigint", (col) => col.notNull())

@@ -52,7 +52,7 @@ describe("users repo integration", () => {
         passwordHash: "hash-2",
         role: "client",
       }),
-    ).rejects.toThrow("UNIQUE constraint failed: users.email");
+    ).rejects.toThrow(/duplicate key value violates unique constraint/i);
 
     const rows = await ctx.db
       .selectFrom("users")
