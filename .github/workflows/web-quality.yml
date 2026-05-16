@@ -1,27 +1,25 @@
-name: web
+name: web / quality
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - "master"
+    branches: [master]
     paths:
       - "apps/web/**"
       - "package.json"
       - "bun.lock"
       - "oxlint.config.ts"
       - "oxfmt.config.ts"
-      - ".github/workflows/web.yml"
+      - ".github/workflows/web-quality.yml"
   pull_request:
-    branches:
-      - "master"
+    branches: [master]
     paths:
       - "apps/web/**"
       - "package.json"
       - "bun.lock"
       - "oxlint.config.ts"
       - "oxfmt.config.ts"
-      - ".github/workflows/web.yml"
+      - ".github/workflows/web-quality.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -55,6 +53,3 @@ jobs:
 
       - name: type check
         run: bun run check:web
-
-      - name: test
-        run: bun run test
