@@ -22,8 +22,8 @@ export async function getAdminStats() {
   ]);
 
   return {
-    totalUsers: Number(userCount?.count ?? 0),
-    totalJobs: Number(jobCount?.count ?? 0),
+    totalUsers: userCount?.count ?? 0,
+    totalJobs: jobCount?.count ?? 0,
   };
 }
 
