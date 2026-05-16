@@ -1,0 +1,25 @@
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.cyan {
+  color: var(--color-cyan);
+  background-color: rgb(0 240 255 / 0.08);
+}
+.amber {
+  color: rgb(251 191 36);
+  background-color: rgb(251 191 36 / 0.08);
+}
+.red {
+  color: rgb(239 68 68);
+  background-color: rgb(239 68 68 / 0.08);
+}
+.muted {
+  color: rgb(75 85 99);
+  background-color: rgb(75 85 99 / 0.08);
+}
