@@ -1,0 +1,17 @@
+{
+  "name": "vulf",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "bun run --cwd apps/web dev",
+    "check": "bun run --cwd apps/web check:types",
+    "format": "oxfmt .",
+    "lint": "oxlint"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.50.0",
+    "oxlint": "^1.65.0"
+  }
+}
