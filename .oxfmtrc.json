@@ -10,5 +10,14 @@
   "tabWidth": 2,
   "useTabs": false,
   "endOfLine": "lf",
-  "insertFinalNewline": true
+  "insertFinalNewline": true,
+  "overrides": [
+    {
+      "files": ["**/*.md"],
+      "options": {
+        "printWidth": 80,
+        "proseWrap": "always"
+      }
+    }
+  ]
 }
