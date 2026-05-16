@@ -1,12 +1,17 @@
 // @refresh reload
 import type { DocumentComponentProps } from "@solidjs/start/server";
 import { createHandler, StartServer } from "@solidjs/start/server";
+import { Show } from "solid-js";
 import { getRequestEvent } from "solid-js/web";
 
 function Nonce() {
   const event = getRequestEvent();
   const nonce = event?.locals?.nonce;
-  return nonce ? <meta name="x-nonce" content={nonce} /> : null;
+  return (
+    <Show when={nonce}>
+      <meta name="x-nonce" content={nonce} />
+    </Show>
+  );
 }
 
 export default createHandler(
