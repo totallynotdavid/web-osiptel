@@ -1,0 +1,13 @@
+.output/
+.nitro/
+.solid-start
+.vitest-db/
+dist/
+
+# for local dbs
+*.db
+*.db-shm
+*.db-wal
+
+# session
+baileys_auth/
