@@ -18,9 +18,6 @@ authors = [
     { name = "David Duran", email = "dadch1404@gmail.com" },
 ]
 
-[project.scripts]
-robot = "robot.app.cli:main"
-
 [tool.setuptools.packages.find]
 include = ["robot*"]
 
