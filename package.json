@@ -5,8 +5,12 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "bun run --cwd apps/web dev",
-    "check": "bun run --cwd apps/web check:types",
+    "dev": "bun run --parallel --no-exit-on-error dev:web dev:robot",
+    "dev:web": "bun run --cwd apps/web dev",
+    "dev:robot": "uv run --directory services/robot uvicorn robot.main:app --host 0.0.0.0 --port 8001",
+    "check": "bun run --parallel check:web check:robot",
+    "check:web": "bun run --cwd apps/web check:types",
+    "check:robot": "uv run --directory services/robot mypy .",
     "test": "bun run --cwd apps/web test",
     "format": "oxfmt .",
     "lint": "oxlint --deny-warnings apps/web"

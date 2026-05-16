@@ -53,9 +53,13 @@ export async function robotLookup(input: {
 
   let res: Response;
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (env.robot.token) {
+      headers["x-robot-token"] = env.robot.token;
+    }
     res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         ruc_list: input.rucList,
         proxy_user: input.proxyUser,

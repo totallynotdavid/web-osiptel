@@ -55,11 +55,13 @@ class ProxySessionConfig:
         return f"http://{self.username}:{self.password}@{self.host}:{self.port}"
 
 
-def load_geonode_config(*, env_file: str) -> GeoNodeConfig:
+def load_geonode_config(
+    *, env_file: str, user: str | None = None, password: str | None = None
+) -> GeoNodeConfig:
     load_dotenv(env_file, override=False)
 
-    user = getenv("GEONODE_USER", "")
-    password = getenv("GEONODE_PASS", "")
+    resolved_user = user if user is not None else getenv("GEONODE_USER", "")
+    resolved_password = password if password is not None else getenv("GEONODE_PASS", "")
     gateway = getenv("GEONODE_GATEWAY", "fr")
     proxy_type_raw = getenv("GEONODE_TYPE", "residential")
     country = getenv("GEONODE_COUNTRY", "")
@@ -70,7 +72,7 @@ def load_geonode_config(*, env_file: str) -> GeoNodeConfig:
     lifetime_raw = getenv("GEONODE_LIFETIME", "").strip()
     lifetime = int(lifetime_raw) if lifetime_raw else 10
 
-    if not user or not password:
+    if not resolved_user or not resolved_password:
         msg = "missing GEONODE_USER or GEONODE_PASS"
         raise RuntimeError(msg)
     if gateway not in _GATEWAY_HOST_BY_NAME:
@@ -87,8 +89,8 @@ def load_geonode_config(*, env_file: str) -> GeoNodeConfig:
 
     proxy_type = cast("ProxyType", proxy_type_raw)
     return GeoNodeConfig(
-        user=user,
-        password=password,
+        user=resolved_user,
+        password=resolved_password,
         host=_GATEWAY_HOST_BY_NAME[gateway],
         proxy_type=proxy_type,
         country=country,

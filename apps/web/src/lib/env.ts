@@ -17,6 +17,7 @@ export const env = {
   },
   robot: {
     url: optional("ROBOT_URL", "http://localhost:8001"),
+    token: process.env.ROBOT_API_TOKEN ?? "",
   },
   auth: {
     get sessionSecret() {
