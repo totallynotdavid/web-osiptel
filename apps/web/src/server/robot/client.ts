@@ -8,7 +8,6 @@ export interface RobotLookupResult {
   ruc: string;
   active: boolean;
   carriers: Record<string, number> | null;
-  providers: string[] | null;
   error: string | null;
 }
 
@@ -22,15 +21,11 @@ function isRobotLookupResult(value: unknown): value is RobotLookupResult {
   const carriers =
     record.carriers === null ||
     (typeof record.carriers === "object" && !Array.isArray(record.carriers));
-  const providers =
-    record.providers === null ||
-    (Array.isArray(record.providers) && record.providers.every((item) => typeof item === "string"));
 
   return (
     typeof record.ruc === "string" &&
     typeof record.active === "boolean" &&
     carriers &&
-    providers &&
     (record.error === null || typeof record.error === "string")
   );
 }
@@ -46,8 +41,13 @@ export async function robotLookup(input: {
   proxyUser: string;
   proxyPass: string;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }): Promise<Result<RobotLookupResult[], string>> {
   const url = `${env.robot.url}/lookup`;
+  const timeoutMs = input.timeoutMs ?? 90_000;
+
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout;
 
   logger.info("robot_lookup_start", { count: input.rucList.length });
 
@@ -65,7 +65,7 @@ export async function robotLookup(input: {
         proxy_user: input.proxyUser,
         proxy_pass: input.proxyPass,
       }),
-      signal: input.signal,
+      signal,
     });
   } catch (fetchError) {
     const errorMessage = `Robot service request failed: ${String(fetchError)}`;

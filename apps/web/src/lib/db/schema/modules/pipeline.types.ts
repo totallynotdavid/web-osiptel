@@ -1,4 +1,4 @@
-export type UploadJobPhase = "queued" | "phase1" | "phase2" | "completed" | "failed";
+export type UploadJobPhase = "queued" | "filtering" | "scanning" | "completed" | "failed";
 export type UploadJobStatus = "pending" | "running" | "completed" | "failed";
 export type ItemStatus = "pending" | "processing" | "done" | "failed";
 

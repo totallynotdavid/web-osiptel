@@ -2,38 +2,46 @@ import { Queue } from "bullmq";
 
 import { getQueueConnection } from "./connection";
 
-export const QUEUE_PHASE1 = "vulf:phase1";
-export const QUEUE_PHASE2 = "vulf:phase2";
+export const QUEUE_FILTER = "vulf:filter";
+export const QUEUE_SCAN = "vulf:scan";
 export const QUEUE_NOTIFY = "vulf:notifications";
 
-export type Phase1JobData = {
+export type FilterJobData = {
   uploadJobId: string;
   userId: string;
+  batchIndex: number;
+  totalBatches: number;
   itemIds: string[];
   rucList: string[];
+  proxyUser: string;
+  proxyPass: string;
 };
 
-export type Phase2JobData = {
+export type ScanJobData = {
   uploadJobId: string;
   userId: string;
-  itemId: string;
-  ruc: string;
+  batchIndex: number;
+  totalBatches: number;
+  itemIds: string[];
+  rucList: string[];
+  proxyUser: string;
+  proxyPass: string;
 };
 
 export type NotifyJobData = {
   userId: string;
   uploadJobId: string;
-  event: "upload_completed" | "upload_failed" | "phase1_complete" | "phone_verification";
+  event: "upload_completed" | "upload_failed" | "phone_verification";
   context: Record<string, unknown>;
 };
 
-let phase1Queue: Queue<Phase1JobData> | null = null;
-let phase2Queue: Queue<Phase2JobData> | null = null;
+let filterQueue: Queue<FilterJobData> | null = null;
+let scanQueue: Queue<ScanJobData> | null = null;
 let notifyQueue: Queue<NotifyJobData> | null = null;
 
-export function getPhase1Queue(): Queue<Phase1JobData> {
-  if (!phase1Queue) {
-    phase1Queue = new Queue<Phase1JobData>(QUEUE_PHASE1, {
+export function getFilterQueue(): Queue<FilterJobData> {
+  if (!filterQueue) {
+    filterQueue = new Queue<FilterJobData>(QUEUE_FILTER, {
       connection: getQueueConnection(),
       defaultJobOptions: {
         attempts: 3,
@@ -43,22 +51,22 @@ export function getPhase1Queue(): Queue<Phase1JobData> {
       },
     });
   }
-  return phase1Queue;
+  return filterQueue;
 }
 
-export function getPhase2Queue(): Queue<Phase2JobData> {
-  if (!phase2Queue) {
-    phase2Queue = new Queue<Phase2JobData>(QUEUE_PHASE2, {
+export function getScanQueue(): Queue<ScanJobData> {
+  if (!scanQueue) {
+    scanQueue = new Queue<ScanJobData>(QUEUE_SCAN, {
       connection: getQueueConnection(),
       defaultJobOptions: {
         attempts: 3,
-        backoff: { type: "exponential", delay: 5000 },
-        removeOnComplete: { count: 500 },
-        removeOnFail: { count: 500 },
+        backoff: { type: "fixed", delay: 30_000 },
+        removeOnComplete: { count: 100 },
+        removeOnFail: { count: 200 },
       },
     });
   }
-  return phase2Queue;
+  return scanQueue;
 }
 
 export function getNotifyQueue(): Queue<NotifyJobData> {
