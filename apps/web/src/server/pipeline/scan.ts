@@ -35,7 +35,7 @@ export async function processScanBatch(
     const ruc = rucList[i];
     const r = byRuc.get(ruc) ?? null;
     const carriers = r?.carriers ?? null;
-    const providers = carriers ? Object.keys(carriers).sort() : null;
+    const providers = carriers ? Object.keys(carriers).toSorted() : null;
     if (r?.active) activeCount++;
 
     await db
