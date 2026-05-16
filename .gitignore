@@ -1,0 +1,17 @@
+node_modules/
+.output/
+.nitro/
+dist/
+
+# for local dbs
+*.db
+*.db-shm
+*.db-wal
+
+# env stuff
+.env
+.env.production
+.env.test
+
+# session
+baileys_auth/
