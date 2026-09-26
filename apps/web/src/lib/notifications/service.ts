@@ -50,7 +50,9 @@ export async function notify(
           ? prefs.phone_verified
             ? prefs.phone
             : null
-          : prefs[channel.contactField as "email"];
+          : channel.contactField === "email"
+            ? prefs.email
+            : prefs.phone;
       if (!to) return Promise.resolve();
       return channel.send(to, message).catch((err: unknown) => {
         logger.error(`${channel.id}_send_failed`, { userId, error: String(err) });

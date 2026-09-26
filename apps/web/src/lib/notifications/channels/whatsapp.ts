@@ -4,7 +4,7 @@ import makeWASocket, {
   makeCacheableSignalKeyStore,
   useMultiFileAuthState,
 } from "@whiskeysockets/baileys";
-import { Boom } from "@hapi/boom";
+import { isBoom } from "@hapi/boom";
 import P from "pino";
 
 import { createLogger } from "~/lib/observability/logger";
@@ -40,7 +40,9 @@ class WhatsAppClient {
       }
       if (connection === "close") {
         this.connected = false;
-        const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        // isBoom, not instanceof: Baileys bundles its own @hapi/boom copy.
+        const error = lastDisconnect?.error;
+        const code = isBoom(error) ? error.output.statusCode : undefined;
         if (code !== DisconnectReason.loggedOut) {
           logger.warn("whatsapp_reconnecting", { code });
           void this.connect();

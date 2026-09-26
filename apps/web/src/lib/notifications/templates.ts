@@ -3,7 +3,10 @@ import type { NotificationEvent, NotificationMessage } from "./types";
 type Context = Record<string, unknown>;
 
 function str(ctx: Context, key: string): string {
-  return String(ctx[key] ?? "");
+  const v = ctx[key];
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  return "";
 }
 
 const templates: Record<NotificationEvent, (ctx: Context) => NotificationMessage> = {
