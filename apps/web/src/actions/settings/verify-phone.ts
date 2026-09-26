@@ -5,6 +5,7 @@ import { getRequestEvent } from "solid-js/web";
 
 import { db } from "~/lib/db/db";
 import { notify } from "~/lib/notifications/service";
+import { VerifyCodeSchema } from "~/lib/validation/forms";
 
 export type VerifyResult = { ok: true } | { ok: false; error: string };
 
@@ -50,8 +51,10 @@ export async function confirmVerificationCode(formData: FormData): Promise<Verif
   const session = event?.locals?.session;
   if (!session) return { ok: false, error: "unauthorized" };
 
-  const input = String(formData.get("code") ?? "").trim();
-  if (!/^\d{6}$/.test(input)) return { ok: false, error: "Invalid code format" };
+  const parsed = VerifyCodeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, error: "Invalid code format" };
+
+  const { code: input } = parsed.data;
 
   const prefs = await db
     .selectFrom("notification_prefs")

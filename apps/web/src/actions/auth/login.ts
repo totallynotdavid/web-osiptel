@@ -7,6 +7,7 @@ import { getRequestEvent } from "solid-js/web";
 import { verifyPassword } from "~/lib/auth/password";
 import { SESSION_COOKIE, SESSION_TTL_MS } from "~/lib/auth/session";
 import { db } from "~/lib/db/db";
+import { LoginSchema } from "~/lib/validation/forms";
 import { createSessionRepo } from "~/server/auth/session-repo";
 import { createUsersRepo } from "~/server/auth/users-repo";
 
@@ -15,14 +16,10 @@ export type LoginResult =
   | { ok: false; error: "invalid_credentials" | "account_disabled" };
 
 export async function loginAction(formData: FormData): Promise<LoginResult> {
-  const email = String(formData.get("email") ?? "")
-    .trim()
-    .toLowerCase();
-  const password = String(formData.get("password") ?? "");
+  const parsed = LoginSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, error: "invalid_credentials" };
 
-  if (!email || !password) {
-    return { ok: false, error: "invalid_credentials" };
-  }
+  const { email, password } = parsed.data;
 
   const users = createUsersRepo(db);
   const sessions = createSessionRepo(db);

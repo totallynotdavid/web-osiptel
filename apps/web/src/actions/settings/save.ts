@@ -4,6 +4,7 @@ import { getRequestEvent } from "solid-js/web";
 
 import { db } from "~/lib/db/db";
 import { encrypt } from "~/lib/crypto/credentials";
+import { NotifPrefsSchema, ProxyCredentialsSchema, firstIssue } from "~/lib/validation/forms";
 
 export type SaveResult = { ok: true } | { ok: false; error: string };
 
@@ -12,14 +13,12 @@ export async function saveProxyCredentials(formData: FormData): Promise<SaveResu
   const session = event?.locals?.session;
   if (!session) return { ok: false, error: "unauthorized" };
 
-  const username = String(formData.get("username") ?? "").trim();
-  const password = String(formData.get("password") ?? "").trim();
+  const parsed = ProxyCredentialsSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
 
-  if (!username || !password) {
-    return { ok: false, error: "Username and password are required" };
-  }
-
+  const { username, password } = parsed.data;
   const encryptedPassword = encrypt(password);
+
   const existing = await db
     .selectFrom("proxy_credentials")
     .select("id")
@@ -56,15 +55,15 @@ export async function saveNotificationPrefs(formData: FormData): Promise<SaveRes
   const session = event?.locals?.session;
   if (!session) return { ok: false, error: "unauthorized" };
 
-  const email = String(formData.get("email") ?? "").trim() || null;
-  const rawPhone = String(formData.get("phone") ?? "").trim();
-  const notifyOnCompletion = formData.get("notify_on_completion") === "1" ? 1 : 0;
-  const notifyOnFailure = formData.get("notify_on_failure") === "1" ? 1 : 0;
+  const parsed = NotifPrefsSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
 
-  if (rawPhone && !/^\d{9}$/.test(rawPhone)) {
-    return { ok: false, error: "Phone must be 9 digits (e.g. 987654321)" };
-  }
-  const phone = rawPhone || null;
+  const {
+    email,
+    phone,
+    notify_on_completion: notifyOnCompletion,
+    notify_on_failure: notifyOnFailure,
+  } = parsed.data;
 
   const existing = await db
     .selectFrom("notification_prefs")
