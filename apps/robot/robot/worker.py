@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import signal
+from pathlib import Path
 from typing import cast
 
 from dotenv import load_dotenv
@@ -19,7 +20,11 @@ from robot.pool import SessionPool, Slot
 from robot.providers.geonode import GeoNodeConfig, ProxyType, _GATEWAY_HOST_BY_NAME
 
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+# Robot-specific .env first so it wins; the repo-root .env fills in shared values
+# (DATABASE_URL, ENCRYPTION_KEY) that the web app also reads.
 load_dotenv(override=False)
+load_dotenv(REPO_ROOT / ".env", override=False)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.environ["DATABASE_URL"]
@@ -32,7 +37,9 @@ BAN_COOLDOWN_S = float(os.getenv("ROBOT_BAN_COOLDOWN_S", "180"))
 CAPTCHA_TIMEOUT_S = float(os.getenv("ROBOT_CAPTCHA_TIMEOUT_S", "30"))
 CAPTCHA_TIMEOUT_FIRST_S = float(os.getenv("ROBOT_CAPTCHA_TIMEOUT_FIRST_S", "45"))
 CAPTCHA_SAME_SESSION_RETRIES = int(os.getenv("ROBOT_CAPTCHA_SAME_SESSION_RETRIES", "1"))
-CAPTCHA_FIRST_TOKEN_JITTER_MAX_S = float(os.getenv("ROBOT_CAPTCHA_FIRST_TOKEN_JITTER_MAX_S", "5"))
+CAPTCHA_FIRST_TOKEN_JITTER_MAX_S = float(
+    os.getenv("ROBOT_CAPTCHA_FIRST_TOKEN_JITTER_MAX_S", "5")
+)
 PAGE_SIZE = int(os.getenv("ROBOT_PAGE_SIZE", "100"))
 
 configure_logging(debug=os.getenv("ROBOT_DEBUG", "").lower() in {"1", "true"})
@@ -43,7 +50,9 @@ def _make_geonode_config() -> GeoNodeConfig:
     gateway = os.getenv("GEONODE_GATEWAY", "fr")
     lifetime = int(os.getenv("GEONODE_LIFETIME", "10"))
     if gateway not in _GATEWAY_HOST_BY_NAME:
-        msg = "GEONODE_GATEWAY must be one of " + "|".join(sorted(_GATEWAY_HOST_BY_NAME))
+        msg = "GEONODE_GATEWAY must be one of " + "|".join(
+            sorted(_GATEWAY_HOST_BY_NAME)
+        )
         raise RuntimeError(msg)
     return GeoNodeConfig(
         user=os.environ["GEONODE_USER"],
@@ -59,7 +68,9 @@ def _make_geonode_config() -> GeoNodeConfig:
     )
 
 
-async def _claim_with_wait(conn: psycopg.AsyncConnection, shutdown: asyncio.Event) -> dict | None:
+async def _claim_with_wait(
+    conn: psycopg.AsyncConnection, shutdown: asyncio.Event
+) -> dict | None:
     """Claim a job; if none available, block on NOTIFY new_work or shutdown."""
     notifies = conn.notifies()
     while not shutdown.is_set():
@@ -69,7 +80,9 @@ async def _claim_with_wait(conn: psycopg.AsyncConnection, shutdown: asyncio.Even
         notify_task = asyncio.ensure_future(notifies.__anext__())
         shutdown_task = asyncio.ensure_future(shutdown.wait())
         try:
-            await asyncio.wait([notify_task, shutdown_task], return_when=asyncio.FIRST_COMPLETED)
+            await asyncio.wait(
+                [notify_task, shutdown_task], return_when=asyncio.FIRST_COMPLETED
+            )
         finally:
             for task in (notify_task, shutdown_task):
                 if not task.done():
@@ -83,7 +96,9 @@ async def _claim_with_wait(conn: psycopg.AsyncConnection, shutdown: asyncio.Even
 
 async def _run_slot(slot: Slot, shutdown: asyncio.Event) -> None:
     """One worker coroutine per session slot. Claims and processes jobs independently."""
-    async with await psycopg.AsyncConnection.connect(DATABASE_URL, autocommit=True) as conn:
+    async with await psycopg.AsyncConnection.connect(
+        DATABASE_URL, autocommit=True
+    ) as conn:
         await conn.execute("LISTEN new_work")
 
         while not shutdown.is_set():
@@ -131,7 +146,9 @@ async def _run_slot(slot: Slot, shutdown: asyncio.Event) -> None:
                 ban_cooldown_s=BAN_COOLDOWN_S,
             )
 
-            carriers = {r.carrier: r.lines for r in lookup.carrier_counts if r.lines > 0}
+            carriers = {
+                r.carrier: r.lines for r in lookup.carrier_counts if r.lines > 0
+            }
             is_active = lookup.total_lines > 0
             providers = sorted(carriers.keys()) if carriers else []
             error: str | None = None
@@ -180,8 +197,7 @@ async def main() -> None:
 
     logger.info("robot_worker_starting pool_size=%d", POOL_SIZE)
     tasks = [
-        asyncio.create_task(_run_slot(pool.slot(i), shutdown))
-        for i in range(POOL_SIZE)
+        asyncio.create_task(_run_slot(pool.slot(i), shutdown)) for i in range(POOL_SIZE)
     ]
     await asyncio.gather(*tasks)
     logger.info("robot_worker_stopped")

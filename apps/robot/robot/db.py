@@ -46,7 +46,9 @@ async def get_user_id(conn: psycopg.AsyncConnection, upload_job_id: str) -> str 
     return row[0] if row else None
 
 
-async def get_proxy_credentials(conn: psycopg.AsyncConnection, user_id: str) -> dict | None:
+async def get_proxy_credentials(
+    conn: psycopg.AsyncConnection, user_id: str
+) -> dict | None:
     rows = await conn.execute(
         "SELECT geonode_username, geonode_password_enc FROM proxy_credentials WHERE user_id = %s",
         (user_id,),
@@ -106,7 +108,9 @@ async def write_result(
     return True
 
 
-async def try_complete_upload(conn: psycopg.AsyncConnection, upload_job_id: str) -> bool:
+async def try_complete_upload(
+    conn: psycopg.AsyncConnection, upload_job_id: str
+) -> bool:
     """Mark upload completed if all items are done. Returns True if this call triggered it."""
     result = await conn.execute(
         """
