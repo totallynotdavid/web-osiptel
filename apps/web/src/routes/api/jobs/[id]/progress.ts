@@ -1,11 +1,14 @@
 import { Client } from "pg";
 import type { APIEvent } from "@solidjs/start/server";
+import { z } from "zod";
 
 import { SESSION_COOKIE } from "~/lib/auth/session";
 import { db } from "~/lib/db/db";
 import { env } from "~/lib/env";
 import { createSessionRepo } from "~/server/auth/session-repo";
 import { createJobsRepo } from "~/server/pipeline/jobs-repo";
+
+const NotifyPayload = z.object({ uploadJobId: z.string() });
 
 function parseCookie(header: string, name: string): string | undefined {
   for (const part of header.split(";")) {
@@ -65,33 +68,24 @@ export async function GET(event: APIEvent): Promise<Response> {
 
       client.on("notification", async (msg) => {
         try {
-          const payload = JSON.parse(msg.payload ?? "{}") as Record<string, unknown>;
+          const r = NotifyPayload.safeParse(JSON.parse(msg.payload ?? "{}"));
+          if (!r.success) return;
+          const { uploadJobId } = r.data;
+          if (uploadJobId !== jobId) return;
 
-          if (msg.channel === "upload_done") {
-            if (payload.uploadJobId !== jobId) return;
-            const updated = await jobs.findById(jobId);
-            if (updated) {
-              encode({
-                processed: updated.processed_rows,
-                total: updated.total_rows,
-                active: updated.active_rows,
-                status: updated.status,
-              });
-            }
-            await cleanup();
-            return;
+          const updated = await jobs.findById(jobId);
+          if (updated) {
+            encode({
+              processed: updated.processed_rows,
+              total: updated.total_rows,
+              active: updated.active_rows,
+              status: updated.status,
+            });
           }
 
-          // progress channel: per-item notification
-          if (payload.uploadJobId !== jobId) return;
-          const updated = await jobs.findById(jobId);
-          if (!updated) return;
-          encode({
-            processed: updated.processed_rows,
-            total: updated.total_rows,
-            active: updated.active_rows,
-            status: updated.status,
-          });
+          if (msg.channel === "upload_done") {
+            await cleanup();
+          }
         } catch {
           // ignore notification parse errors
         }

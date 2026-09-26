@@ -1,4 +1,5 @@
 import { Client } from "pg";
+import { z } from "zod";
 
 import { db } from "~/lib/db/db";
 import { env } from "~/lib/env";
@@ -6,6 +7,12 @@ import { createLogger } from "~/lib/observability/logger";
 import { initChannels, notify } from "~/lib/notifications/service";
 
 const logger = createLogger("notify-runner");
+
+const UploadDonePayload = z.object({
+  uploadJobId: z.string(),
+  userId: z.string(),
+  status: z.string(),
+});
 
 await initChannels();
 
@@ -17,11 +24,9 @@ logger.info("notify_runner_ready");
 
 client.on("notification", async (msg) => {
   try {
-    const { uploadJobId, userId, status } = JSON.parse(msg.payload ?? "{}") as {
-      uploadJobId: string;
-      userId: string;
-      status: string;
-    };
+    const r = UploadDonePayload.safeParse(JSON.parse(msg.payload ?? "{}"));
+    if (!r.success) return;
+    const { uploadJobId, userId, status } = r.data;
     const event = status === "completed" ? "upload_completed" : "upload_failed";
     await notify(db, userId, event, { uploadJobId });
   } catch (err: unknown) {

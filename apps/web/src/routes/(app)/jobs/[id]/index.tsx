@@ -1,6 +1,7 @@
 import { createAsync, query, useParams } from "@solidjs/router";
 import { createEffect, createSignal, For, onCleanup, Show, Suspense } from "solid-js";
 
+import { z } from "zod";
 import { getJobDetail } from "~/actions/jobs/queries";
 import { Card } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -9,6 +10,19 @@ import { JobBadge } from "~/components/job-badge";
 import { PageHeader } from "~/components/page-header";
 
 const jobDetailQuery = query(getJobDetail, "jobDetail");
+
+const ProgressMessage = z.object({ processed: z.number(), total: z.number() });
+const CarrierCounts = z.record(z.string(), z.number());
+
+function carrierCount(json: string | null): number | string {
+  if (!json) return "-";
+  try {
+    const r = CarrierCounts.safeParse(JSON.parse(json));
+    return r.success ? Object.keys(r.data).length : "-";
+  } catch {
+    return "-";
+  }
+}
 
 export const route = {
   preload: ({ params }: { params: { id?: string } }) => jobDetailQuery(params.id ?? ""),
@@ -38,14 +52,15 @@ export default function JobDetailPage() {
 
     if (job.status === "running") {
       const es = new EventSource(`/api/jobs/${params.id}/progress`);
-      es.onmessage = (e) => {
+      es.addEventListener("message", (e) => {
         try {
-          const msg = JSON.parse(e.data) as { processed: number; total: number };
-          const p = msg.total > 0 ? Math.round((msg.processed / msg.total) * 100) : 0;
-          setProgress(p);
+          const r = ProgressMessage.safeParse(JSON.parse(e.data));
+          if (!r.success) return;
+          const { processed, total } = r.data;
+          setProgress(total > 0 ? Math.round((processed / total) * 100) : 0);
         } catch {}
-      };
-      es.onerror = () => es.close();
+      });
+      es.addEventListener("error", () => es.close());
       onCleanup(() => es.close());
     }
   });
@@ -131,19 +146,7 @@ export default function JobDetailPage() {
                             {item.is_active === null ? "-" : item.is_active ? "Yes" : "No"}
                           </span>
                           <span class="text-xs text-gray-500">
-                            {item.carrier_counts_json
-                              ? (() => {
-                                  try {
-                                    const c = JSON.parse(item.carrier_counts_json!) as Record<
-                                      string,
-                                      number
-                                    >;
-                                    return Object.keys(c).length;
-                                  } catch {
-                                    return "-";
-                                  }
-                                })()
-                              : "-"}
+                            {carrierCount(item.carrier_counts_json)}
                           </span>
                         </div>
                       )}
