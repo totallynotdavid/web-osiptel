@@ -3,3 +3,6 @@ node_modules/
 # env stuff
 .env
 .env.production
+
+# local postgres data dir (dev:infra:setup)
+.pgdata/

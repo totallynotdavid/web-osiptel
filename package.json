@@ -9,6 +9,8 @@
     "dev": "bun run --parallel --no-exit-on-error dev:web dev:robot",
     "dev:web": "bun run --cwd apps/web dev",
     "dev:robot": "uv run --directory apps/robot python -m robot.worker",
+    "dev:infra": "mise x postgres -- postgres -D .pgdata -k /tmp",
+    "dev:infra:setup": "mise x postgres -- initdb -D .pgdata --auth=trust && mise x postgres -- pg_ctl -D .pgdata -o \"-k /tmp\" -l .pgdata/server.log start && mise x postgres -- createdb -h /tmp vulf && mise x postgres -- pg_ctl -D .pgdata stop",
     "check": "bun run --parallel check:web check:robot",
     "check:web": "bun run --cwd apps/web check:types",
     "check:robot": "uv run --directory apps/robot mypy .",
