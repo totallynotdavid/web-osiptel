@@ -32,17 +32,17 @@ export default function SettingsPage() {
   const [verifyStep, setVerifyStep] = createSignal<"idle" | "sent">("idle");
   const [verifyError, setVerifyError] = createSignal<string | null>(null);
 
-  async function handleProxy(e: SubmitEvent) {
+  async function handleProxy(e: SubmitEvent & { currentTarget: HTMLFormElement }) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget as HTMLFormElement);
+    const fd = new FormData(e.currentTarget);
     const result = await saveProxy(fd);
     setProxyStatus(result.ok ? "Saved." : result.error);
     setTimeout(() => setProxyStatus(null), 3000);
   }
 
-  async function handleNotif(e: SubmitEvent) {
+  async function handleNotif(e: SubmitEvent & { currentTarget: HTMLFormElement }) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget as HTMLFormElement);
+    const fd = new FormData(e.currentTarget);
     const result = await saveNotif(fd);
     if (result.ok) {
       setVerifyStep("idle");
@@ -62,9 +62,9 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleConfirmCode(e: SubmitEvent) {
+  async function handleConfirmCode(e: SubmitEvent & { currentTarget: HTMLFormElement }) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget as HTMLFormElement);
+    const fd = new FormData(e.currentTarget);
     const result = await confirmVerification(fd);
     if (result.ok) {
       setVerifyStep("idle");

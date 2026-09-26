@@ -27,8 +27,8 @@ export default function DashboardPage() {
     void upload(fd);
   }
 
-  function handleBrowse(e: Event) {
-    const input = e.currentTarget as HTMLInputElement;
+  function handleBrowse(e: Event & { currentTarget: HTMLInputElement }) {
+    const input = e.currentTarget;
     const file = input.files?.[0];
     if (!file) return;
     const fd = new FormData();

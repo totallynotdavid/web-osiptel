@@ -33,14 +33,14 @@ export default function AdminPage() {
   const [showForm, setShowForm] = createSignal(false);
   const [formError, setFormError] = createSignal<string | null>(null);
 
-  async function handleCreate(e: SubmitEvent) {
+  async function handleCreate(e: SubmitEvent & { currentTarget: HTMLFormElement }) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget as HTMLFormElement);
+    const fd = new FormData(e.currentTarget);
     const result = await createUser(fd);
     if (result.ok) {
       setShowForm(false);
       setFormError(null);
-      (e.currentTarget as HTMLFormElement).reset();
+      e.currentTarget.reset();
     } else {
       setFormError(result.error);
     }

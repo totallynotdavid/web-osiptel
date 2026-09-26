@@ -59,8 +59,8 @@ export function WebGLSwirl(props: { class?: string }) {
   onMount(() => {
     if (!canvas) return;
     const el = canvas;
-    const gl = (el.getContext("webgl") ??
-      el.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+    const ctx = el.getContext("webgl") ?? el.getContext("experimental-webgl");
+    const gl = ctx instanceof WebGLRenderingContext ? ctx : null;
     if (!gl) return;
 
     function resize() {

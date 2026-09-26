@@ -13,12 +13,12 @@ export default function LoginPage() {
   const [error, setError] = createSignal<string | null>(null);
   const [loading, setLoading] = createSignal(false);
 
-  async function handleSubmit(e: SubmitEvent) {
+  async function handleSubmit(e: SubmitEvent & { currentTarget: HTMLFormElement }) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const result = await submit(new FormData(e.target as HTMLFormElement));
+      const result = await submit(new FormData(e.currentTarget));
       if (result && !result.ok) {
         setError(
           result.error === "account_disabled"
