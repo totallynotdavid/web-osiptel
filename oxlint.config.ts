@@ -13,16 +13,12 @@ export default defineConfig({
   rules: {
     "import/no-named-export": "off",
     "import/group-exports": "off",
-    "import/no-relative-parent-imports": "off",
     "import/prefer-default-export": "off",
     "import/no-named-as-default": "off",
     "import/no-unassigned-import": "off",
-    "typescript/no-base-to-string": "off",
-    "typescript/no-unsafe-type-assertion": "off",
     "typescript/no-unnecessary-type-assertion": "off",
     "typescript/no-unsafe-enum-comparison": "off",
     "unicorn/consistent-function-scoping": "off",
-    "unicorn/prefer-add-event-listener": "off",
 
     // eslint-plugin-solid rules (SolidJS-specific)
     "solid/components-return-once": "error",
